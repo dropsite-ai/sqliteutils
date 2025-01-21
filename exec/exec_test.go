@@ -45,7 +45,7 @@ const migration = `
 func TestExec(t *testing.T) {
 	ctx := context.Background()
 
-	err := test.SetupTestPool(ctx, t, migration, 4)
+	err := test.Pool(ctx, t, migration, 4)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -403,7 +403,7 @@ func TestExec_Concurrency(t *testing.T) {
 		INSERT INTO users (name, email) VALUES ('Initial User', 'initial@example.com');
 	`
 
-	err := test.SetupTestPool(ctx, t, m, 4)
+	err := test.Pool(ctx, t, m, 4)
 	if err != nil {
 		t.Fatal(err)
 	}

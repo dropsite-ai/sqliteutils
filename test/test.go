@@ -9,9 +9,9 @@ import (
 	"zombiezen.com/go/sqlite/sqlitex"
 )
 
-// SetupTestPool initializes an in-memory SQLite pool using dbpool.InitPool,
+// Pool initializes an in-memory SQLite pool using dbpool.InitPool,
 // This function should be called at the beginning of each sqlite test.
-func SetupTestPool(ctx context.Context, t *testing.T, migration string, poolSize int) error {
+func Pool(ctx context.Context, t *testing.T, migration string, poolSize int) error {
 	t.Helper()
 
 	// Define the in-memory DSN for testing
