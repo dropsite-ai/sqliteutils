@@ -12,17 +12,10 @@ import (
 
 func main() {
 	// Define and parse flags
-	dbPath := flag.String("db-path", "sqlite.db", "Path to the SQLite database file")
-	poolSize := flag.Int("pool-size", 4, "Number of connections in the pool")
-	query := flag.String("query", "", "SQL query to execute")
+	dbPath := flag.String("dbpath", "sqlite.db", "Path to the SQLite database file")
+	poolSize := flag.Int("poolsize", 4, "Number of connections in the pool")
+	query := flag.String("query", "SELECT sqlite_version();", "SQL query to execute")
 	flag.Parse()
-
-	// Validate inputs
-	if *query == "" {
-		fmt.Println("Error: --query flag is required")
-		flag.Usage()
-		os.Exit(1)
-	}
 
 	// Initialize the database pool
 	err := pool.InitPool(*dbPath, *poolSize)

@@ -20,6 +20,17 @@ cd sqliteutils
 make install
 ```
 
+## Usage
+
+```bash
+  -dbpath string
+    	Path to the SQLite database file (default "sqlite.db")
+  -poolsize int
+    	Number of connections in the pool (default 4)
+  -query string
+    	SQL query to execute (default "SELECT sqlite_version();")
+```
+
 ## Test
 
 ```bash
