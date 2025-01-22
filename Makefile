@@ -23,7 +23,7 @@ build:
 	goreleaser release --snapshot --clean
 
 install: build
-	sudo cp $(TARGET_BINARY)_*/mdcopy $(INSTALL_DIR)/$(BINARY_NAME)
+	sudo cp $(TARGET_BINARY)_*/$(BINARY_NAME) $(INSTALL_DIR)/$(BINARY_NAME)
 
 release:
 	@echo "Creating a new release..."
