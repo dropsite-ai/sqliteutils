@@ -75,7 +75,7 @@ func TestExec(t *testing.T) {
 				"$email3": "charlie@example.com",
 			},
 		}
-		err := exec.Exec(ctx, queries, params, nil)
+		err := exec.ExecMulti(ctx, queries, params, nil)
 		assert.NoError(t, err, "Exec should execute multiple INSERT statements without error")
 
 		verifyUsers := []struct {
@@ -102,7 +102,7 @@ func TestExec(t *testing.T) {
 					count = int(c)
 				}
 			}
-			err := exec.Exec(ctx, queries, params, resultFunc)
+			err := exec.ExecMulti(ctx, queries, params, resultFunc)
 			assert.NoError(t, err, "Exec should execute SELECT without error")
 			assert.Equal(t, 1, count, fmt.Sprintf("User %s should exist in the database", user.Name))
 		}
@@ -119,7 +119,7 @@ func TestExec(t *testing.T) {
 			results = append(results, row)
 		}
 
-		err := exec.Exec(ctx, queries, params, resultFunc)
+		err := exec.ExecMulti(ctx, queries, params, resultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT statement without error")
 		assert.Len(t, results, 3, "There should be 3 users in the database")
 
@@ -150,7 +150,7 @@ func TestExec(t *testing.T) {
 				"$email": "david@example.com",
 			},
 		}
-		err := exec.Exec(ctx, insertQueries, insertParams, nil)
+		err := exec.ExecMulti(ctx, insertQueries, insertParams, nil)
 		assert.NoError(t, err, "Exec should bind string parameters correctly")
 
 		// Verify the inserted user
@@ -168,7 +168,7 @@ func TestExec(t *testing.T) {
 				count = int(c)
 			}
 		}
-		err = exec.Exec(ctx, selectQueries, selectParams, resultFunc)
+		err = exec.ExecMulti(ctx, selectQueries, selectParams, resultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 1, count, "User David Lee should exist in the database")
 	})
@@ -191,7 +191,7 @@ func TestExec(t *testing.T) {
 			},
 		}
 
-		err := exec.ExecTx(ctx, queries, params, nil)
+		err := exec.ExecMultiTx(ctx, queries, params, nil)
 		assert.NoError(t, err, "ExecTx should execute transaction without error")
 
 		// Verify that the user is inserted
@@ -209,7 +209,7 @@ func TestExec(t *testing.T) {
 				userCount = int(c)
 			}
 		}
-		err = exec.Exec(ctx, userQueries, userParams, userResultFunc)
+		err = exec.ExecMulti(ctx, userQueries, userParams, userResultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 1, userCount, "User Eve Adams should exist in the database")
 
@@ -228,7 +228,7 @@ func TestExec(t *testing.T) {
 				orderCount = int(c)
 			}
 		}
-		err = exec.Exec(ctx, orderQueries, orderParams, orderResultFunc)
+		err = exec.ExecMulti(ctx, orderQueries, orderParams, orderResultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 1, orderCount, "Order for World's Best Boss Mug should exist in the database")
 	})
@@ -250,7 +250,7 @@ func TestExec(t *testing.T) {
 			},
 		}
 
-		err := exec.ExecTx(ctx, queries, params, nil)
+		err := exec.ExecMultiTx(ctx, queries, params, nil)
 		assert.Error(t, err, "ExecTx should return an error due to UNIQUE constraint violation")
 
 		// Verify that no new users were inserted
@@ -268,7 +268,7 @@ func TestExec(t *testing.T) {
 				count = int(c)
 			}
 		}
-		err = exec.Exec(ctx, verifyQueries, verifyParams, verifyResultFunc)
+		err = exec.ExecMulti(ctx, verifyQueries, verifyParams, verifyResultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 0, count, "Neither Grace Hopper nor Henry Ford should exist due to transaction rollback")
 	})
@@ -291,7 +291,7 @@ func TestExec(t *testing.T) {
 			},
 		}
 
-		err := exec.ExecTx(ctx, queries, params, func(index int, row map[string]interface{}) {
+		err := exec.ExecMultiTx(ctx, queries, params, func(index int, row map[string]interface{}) {
 			fmt.Println("Logging map:", row)
 		})
 		assert.Error(t, err, "ExecTx should return an error due to FOREIGN KEY constraint violation")
@@ -312,7 +312,7 @@ func TestExec(t *testing.T) {
 				userCount = int(c)
 			}
 		}
-		err = exec.Exec(ctx, userQueries, userParams, userResultFunc)
+		err = exec.ExecMulti(ctx, userQueries, userParams, userResultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 0, userCount, "User Oscar Wilde should not exist due to transaction rollback")
 
@@ -331,7 +331,7 @@ func TestExec(t *testing.T) {
 				orderCount = int(c)
 			}
 		}
-		err = exec.Exec(ctx, orderQueries, orderParams, orderResultFunc)
+		err = exec.ExecMulti(ctx, orderQueries, orderParams, orderResultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 0, orderCount, "Order Literary Classics should not exist due to transaction rollback")
 	})
@@ -352,7 +352,7 @@ func TestExec(t *testing.T) {
 			},
 		}
 
-		err := exec.ExecTx(ctx, queries, params, nil)
+		err := exec.ExecMultiTx(ctx, queries, params, nil)
 		assert.Error(t, err, "ExecTx should return an error due to invalid SQL statement")
 
 		// Verify that the user was not inserted due to transaction rollback
@@ -370,7 +370,7 @@ func TestExec(t *testing.T) {
 				count = int(c)
 			}
 		}
-		err = exec.Exec(ctx, userQueries, userParams, userResultFunc)
+		err = exec.ExecMulti(ctx, userQueries, userParams, userResultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 0, count, "User Peter Parker should not exist due to transaction rollback")
 	})
@@ -386,7 +386,7 @@ func TestExec(t *testing.T) {
 			nil,
 		}
 
-		err := exec.Exec(ctx, queries, params, nil)
+		err := exec.ExecMulti(ctx, queries, params, nil)
 		assert.NoError(t, err, "Exec should handle empty statements gracefully")
 	})
 
@@ -396,7 +396,7 @@ func TestExec(t *testing.T) {
 		params := []map[string]interface{}{nil}
 
 		// Empty query should not cause any issues
-		err := exec.ExecTx(ctx, queries, params, nil)
+		err := exec.ExecMultiTx(ctx, queries, params, nil)
 		assert.NoError(t, err, "ExecTx should handle empty transaction gracefully")
 	})
 
@@ -413,7 +413,7 @@ func TestExec(t *testing.T) {
 			},
 		}
 
-		err := exec.Exec(ctx, queries, params, nil)
+		err := exec.ExecMulti(ctx, queries, params, nil)
 		assert.Error(t, err, "Exec should return an error when inserting NULL into NOT NULL column")
 	})
 
@@ -429,7 +429,7 @@ func TestExec(t *testing.T) {
 			},
 		}
 
-		err := exec.ExecTx(ctx, insertQueries, insertParams, nil)
+		err := exec.ExecMultiTx(ctx, insertQueries, insertParams, nil)
 		assert.NoError(t, err, "ExecTx should execute transaction without error")
 
 		// Verify that the user exists by querying with unique fields
@@ -450,7 +450,7 @@ func TestExec(t *testing.T) {
 				email = e
 			}
 		}
-		err = exec.Exec(ctx, verifyQueries, verifyParams, verifyResultFunc)
+		err = exec.ExecMulti(ctx, verifyQueries, verifyParams, verifyResultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, "Laura Palmer", name, "User name should match")
 		assert.Equal(t, "laura@example.com", email, "User email should match")
@@ -560,14 +560,14 @@ func TestExec_Concurrency(t *testing.T) {
 		}) {
 			defer wg.Done()
 			if task.isTx {
-				err = exec.ExecTx(ctx, task.queries, task.params, nil)
+				err = exec.ExecMultiTx(ctx, task.queries, task.params, nil)
 				if task.wantErr {
 					assert.Error(t, err, fmt.Sprintf("%s should return an error", task.name))
 				} else {
 					assert.NoError(t, err, fmt.Sprintf("%s should execute without error", task.name))
 				}
 			} else {
-				err = exec.Exec(ctx, task.queries, task.params, nil)
+				err = exec.ExecMulti(ctx, task.queries, task.params, nil)
 				if task.wantErr {
 					assert.Error(t, err, fmt.Sprintf("%s should return an error", task.name))
 				} else {
@@ -605,7 +605,7 @@ func TestExec_Concurrency(t *testing.T) {
 				count = int(c)
 			}
 		}
-		err = exec.Exec(ctx, queries, params, resultFunc)
+		err = exec.ExecMulti(ctx, queries, params, resultFunc)
 		assert.NoError(t, err, "Exec should execute SELECT without error")
 		assert.Equal(t, 1, count, fmt.Sprintf("User %s should exist in the database", user.Name))
 	}
@@ -625,7 +625,7 @@ func TestExec_Concurrency(t *testing.T) {
 			userCount = int(c)
 		}
 	}
-	err = exec.Exec(ctx, queries, params, resultFuncUser)
+	err = exec.ExecMulti(ctx, queries, params, resultFuncUser)
 	assert.NoError(t, err, "Exec should execute SELECT without error")
 	assert.Equal(t, 0, userCount, "User Concurrent User 3 should not exist due to transaction rollback")
 }

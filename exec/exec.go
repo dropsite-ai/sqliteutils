@@ -10,9 +10,14 @@ import (
 	"zombiezen.com/go/sqlite"
 )
 
+// Exec executes a single SQL statement with parameters.
+func Exec(ctx context.Context, query string, params map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
+	return ExecMulti(ctx, []string{query}, []map[string]interface{}{params}, resultFunc)
+}
+
 // Exec executes multiple SQL statements provided as separate queries with their respective parameters.
 // Each query in the `queries` slice corresponds to the parameters in the `params` slice by index.
-func Exec(ctx context.Context, queries []string, params []map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
+func ExecMulti(ctx context.Context, queries []string, params []map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
 	// Validate that the number of queries matches the number of params
 	if len(queries) != len(params) {
 		return fmt.Errorf("the number of queries (%d) does not match the number of params (%d)", len(queries), len(params))
@@ -47,7 +52,7 @@ func Exec(ctx context.Context, queries []string, params []map[string]interface{}
 
 // ExecTx executes multiple SQL statements within a single transaction.
 // Each query in the `queries` slice corresponds to the parameters in the `params` slice by index.
-func ExecTx(ctx context.Context, queries []string, params []map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
+func ExecMultiTx(ctx context.Context, queries []string, params []map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
 	// Validate that the number of queries matches the number of params
 	if len(queries) != len(params) {
 		return fmt.Errorf("the number of queries (%d) does not match the number of params (%d)", len(queries), len(params))
