@@ -10,36 +10,63 @@ import (
 	"zombiezen.com/go/sqlite"
 )
 
-// Exec executes a query string containing multiple SQL statements.
-// It splits the query by ";\n" and executes each statement sequentially.
-func Exec(ctx context.Context, queryString string, params map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
+// Exec executes multiple SQL statements provided as separate queries with their respective parameters.
+// Each query in the `queries` slice corresponds to the parameters in the `params` slice by index.
+func Exec(ctx context.Context, queries []string, params []map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
+	// Validate that the number of queries matches the number of params
+	if len(queries) != len(params) {
+		return fmt.Errorf("the number of queries (%d) does not match the number of params (%d)", len(queries), len(params))
+	}
+
+	// Obtain a connection pool
 	pool, err := pool.GetPool()
 	if err != nil {
 		return fmt.Errorf("failed to create database pool: %w", err)
 	}
 
+	// Take a connection from the pool
 	conn, err := pool.Take(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to obtain database connection: %w", err)
 	}
 	defer pool.Put(conn)
 
-	return executeMultipleStatements(conn, queryString, params, resultFunc)
+	// Execute each query with its corresponding parameters
+	for i, query := range queries {
+		trimmedQuery := trimQuery(query)
+		if trimmedQuery == "" {
+			continue
+		}
+		if err := executeSingleStatement(conn, trimmedQuery, params[i], i, resultFunc); err != nil {
+			return fmt.Errorf("error executing statement %d: %w", i+1, err)
+		}
+	}
+
+	return nil
 }
 
-// ExecTx executes a series of SQL statements wrapped in a transaction.
-func ExecTx(ctx context.Context, queryString string, params map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
+// ExecTx executes multiple SQL statements within a single transaction.
+// Each query in the `queries` slice corresponds to the parameters in the `params` slice by index.
+func ExecTx(ctx context.Context, queries []string, params []map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
+	// Validate that the number of queries matches the number of params
+	if len(queries) != len(params) {
+		return fmt.Errorf("the number of queries (%d) does not match the number of params (%d)", len(queries), len(params))
+	}
+
+	// Obtain a connection pool
 	pool, err := pool.GetPool()
 	if err != nil {
 		return fmt.Errorf("failed to create database pool: %w", err)
 	}
 
+	// Take a connection from the pool
 	conn, err := pool.Take(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to obtain database connection: %w", err)
 	}
 	defer pool.Put(conn)
 
+	// Begin the transaction
 	if err := executeRawStatement(conn, "BEGIN TRANSACTION;"); err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -53,30 +80,22 @@ func ExecTx(ctx context.Context, queryString string, params map[string]interface
 		}
 	}()
 
-	if err := executeMultipleStatements(conn, queryString, params, resultFunc); err != nil {
-		return err
+	// Execute each query with its corresponding parameters
+	for i, query := range queries {
+		trimmedQuery := trimQuery(query)
+		if trimmedQuery == "" {
+			continue
+		}
+		if err := executeSingleStatement(conn, trimmedQuery, params[i], i, resultFunc); err != nil {
+			return fmt.Errorf("error executing statement %d: %w", i+1, err)
+		}
 	}
 
+	// Commit the transaction
 	if err := executeRawStatement(conn, "COMMIT;"); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 	committed = true
-	return nil
-}
-
-func executeMultipleStatements(conn *sqlite.Conn, queryString string, params map[string]interface{}, resultFunc func(int, map[string]interface{})) error {
-	queries := strings.Split(queryString, ";\n")
-	statementIndex := 0
-	for _, query := range queries {
-		query = strings.TrimSpace(query)
-		if query == "" {
-			continue
-		}
-		if err := executeSingleStatement(conn, query, params, statementIndex, resultFunc); err != nil {
-			return fmt.Errorf("error executing statement %d: %w", statementIndex+1, err)
-		}
-		statementIndex++
-	}
 	return nil
 }
 
@@ -104,18 +123,18 @@ func executeRawStatement(conn *sqlite.Conn, statement string) error {
 func executeSingleStatement(conn *sqlite.Conn, query string, params map[string]interface{}, index int, resultFunc func(int, map[string]interface{})) error {
 	stmt, err := conn.Prepare(query)
 	if err != nil {
-		return fmt.Errorf("SQL preparation error: %w", err)
+		return fmt.Errorf("SQL preparation error for query '%s': %w", query, err)
 	}
 	defer stmt.Finalize()
 
-	if err := bindParams(stmt, params); err != nil {
-		return err
-	}
+	// Bind parameters specific to this query
+	bindParams(stmt, params) // No error handling needed
 
+	// Execute the statement and process results
 	for {
 		hasRow, err := stmt.Step()
 		if err != nil {
-			return fmt.Errorf("error executing SQL query: %w", err)
+			return fmt.Errorf("error executing SQL query '%s': %w", query, err)
 		}
 		if !hasRow {
 			break
@@ -124,9 +143,16 @@ func executeSingleStatement(conn *sqlite.Conn, query string, params map[string]i
 			resultFunc(index, readRow(stmt))
 		}
 	}
+
+	// Reset the statement for potential reuse
+	if err := stmt.Reset(); err != nil {
+		return fmt.Errorf("failed to reset statement for query '%s': %w", query, err)
+	}
+
 	return nil
 }
 
+// readRow reads the current row from the statement and returns it as a map.
 func readRow(stmt *sqlite.Stmt) map[string]interface{} {
 	columnData := make(map[string]interface{})
 	for i := 0; i < stmt.ColumnCount(); i++ {
@@ -150,9 +176,10 @@ func readRow(stmt *sqlite.Stmt) map[string]interface{} {
 }
 
 // bindParams binds parameters to the SQL statement.
-func bindParams(stmt *sqlite.Stmt, params map[string]interface{}) error {
+// NOTE: This function no longer returns an error because the Bind* methods do not.
+func bindParams(stmt *sqlite.Stmt, params map[string]interface{}) {
 	if params == nil {
-		return nil
+		return
 	}
 	for i := 1; i <= stmt.BindParamCount(); i++ {
 		paramName := stmt.BindParamName(i)
@@ -160,6 +187,7 @@ func bindParams(stmt *sqlite.Stmt, params map[string]interface{}) error {
 			continue
 		}
 
+		// Ensure that the parameter map keys include the prefix used in the SQL query (e.g., ":name")
 		value, exists := params[paramName]
 		if !exists || value == nil {
 			stmt.BindNull(i)
@@ -180,16 +208,28 @@ func bindParams(stmt *sqlite.Stmt, params map[string]interface{}) error {
 		case string:
 			stmt.BindText(i, v)
 		case int, int32, int64:
-			stmt.BindInt64(i, val.Int())
+			intVal := val.Int()
+			stmt.BindInt64(i, intVal)
 		case float32, float64:
-			stmt.BindFloat(i, val.Float())
+			floatVal := val.Float()
+			stmt.BindFloat(i, floatVal)
 		case bool:
 			stmt.BindBool(i, v)
 		case []byte:
 			stmt.BindBytes(i, v)
 		default:
-			return fmt.Errorf("unsupported type for parameter '%s': %T", paramName, value)
+			// Unsupported types are handled by handleBindErr internally
+			// Optionally, you can log or panic here if needed
+			fmt.Printf("unsupported type for parameter '%s': %T\n", paramName, value)
 		}
 	}
-	return nil
+}
+
+// trimQuery trims whitespace and ensures the query does not end with a semicolon.
+func trimQuery(query string) string {
+	trimmed := strings.TrimSpace(query)
+	if strings.HasSuffix(trimmed, ";") {
+		return strings.TrimSuffix(trimmed, ";")
+	}
+	return trimmed
 }

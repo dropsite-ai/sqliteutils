@@ -29,10 +29,14 @@ func main() {
 		}
 	}()
 
+	// Prepare the queries and parameters as slices
+	queries := []string{*query}
+	params := []map[string]interface{}{nil} // No parameters for the default query
+
 	// Execute the query
 	ctx := context.Background()
-	err = exec.Exec(ctx, *query, nil, func(index int, row map[string]interface{}) {
-		fmt.Printf("Result %d: %+v\n", index, row)
+	err = exec.Exec(ctx, queries, params, func(index int, row map[string]interface{}) {
+		fmt.Printf("Result %d: %+v\n", index+1, row)
 	})
 	if err != nil {
 		fmt.Printf("Failed to execute query: %v\n", err)
