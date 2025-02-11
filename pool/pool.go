@@ -99,7 +99,7 @@ func initPoolUnlocked(uri string, poolSize int) error {
 				return sqliteutils.FailedToEnableForeignKeysError(err)
 			}
 			// Create reverse UDF
-			conn.CreateFunction("reverse", &sqlite.FunctionImpl{
+			return conn.CreateFunction("reverse", &sqlite.FunctionImpl{
 				NArgs:         1,
 				Deterministic: true,
 				Scalar: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
@@ -111,7 +111,6 @@ func initPoolUnlocked(uri string, poolSize int) error {
 					return sqlite.TextValue(string(runes)), nil
 				},
 			})
-			return nil
 		},
 	})
 	if err != nil {
