@@ -98,6 +98,10 @@ func initPoolUnlocked(uri string, poolSize int) error {
 			if err = sqlitex.Execute(conn, "PRAGMA foreign_keys = ON;", nil); err != nil {
 				return sqliteutils.FailedToEnableForeignKeysError(err)
 			}
+			// Enable trusted schema
+			if err = sqlitex.Execute(conn, "PRAGMA trusted_schema=1;", nil); err != nil {
+				return sqliteutils.FailedToEnableForeignKeysError(err)
+			}
 			// Create reverse UDF
 			return conn.CreateFunction("reverse", &sqlite.FunctionImpl{
 				NArgs:         1,
