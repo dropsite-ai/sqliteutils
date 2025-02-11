@@ -25,13 +25,6 @@ func FailedToEnableForeignKeysError(err error) error {
 	return fmt.Errorf("failed to enable foreign keys: %w", err)
 }
 
-func FailedToEnableTrustedSchemaError(err error) error {
-	if err == nil {
-		return nil
-	}
-	return fmt.Errorf("failed to enable trusted schema: %w", err)
-}
-
 func FailedToInitPoolError(err error, uri string) error {
 	if err == nil {
 		return nil
