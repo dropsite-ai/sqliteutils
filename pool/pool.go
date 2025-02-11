@@ -98,6 +98,19 @@ func initPoolUnlocked(uri string, poolSize int) error {
 			if err = sqlitex.Execute(conn, "PRAGMA foreign_keys = ON;", nil); err != nil {
 				return sqliteutils.FailedToEnableForeignKeysError(err)
 			}
+			// Create reverse UDF
+			conn.CreateFunction("reverse", &sqlite.FunctionImpl{
+				NArgs:         1,
+				Deterministic: true,
+				Scalar: func(ctx sqlite.Context, args []sqlite.Value) (sqlite.Value, error) {
+					input := args[0].Text()
+					runes := []rune(input)
+					for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+						runes[i], runes[j] = runes[j], runes[i]
+					}
+					return sqlite.TextValue(string(runes)), nil
+				},
+			})
 			return nil
 		},
 	})
